@@ -33,4 +33,13 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+# rviz marker publisher
+add_executable(rviz_marker_pub src/rviz_marker.cpp)
+ament_target_dependencies(rviz_marker_pub rclcpp visualization_msgs)
+
+install(TARGETS
+  rviz_marker_pub
+  DESTINATION lib/${PROJECT_NAME}/
+)
+
 ament_package()
