@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Launch file ROS2 -->
+
+<launch>
+
+  <include file="$(find-pkg-share my_package)/launch/simulation.launch.py"/>
+
+  <node pkg="tf2_ros" exec="static_transform_publisher" name="map_odom" args="0 0 0 0 0 0 map odom" /> 
+
+  <let name="rviz_config" value="/home/user/catkin_ws/src/my_package/rviz/rviz_config.rviz"/>
+  <node name="rviz2" pkg="rviz2" exec="rviz2" args="-d $(var rviz_config)"/>
+
+  <node name="obstacle_avoidance" pkg="my_package" exec="obstacle_avoidance" output="screen">
+    <param name="linear_x_velocity" value="0.3"/>
+    <param name="angular_z_velocity" value="0.3"/>
+    <remap from="/dolly/laser_scan" to="/laser_scan"/>
+    <remap from="/cmd_vel" to="/dolly/cmd_vel"/>
+  </node>
+
+  <group>
+  <push-ros-namespace namespace="marker_1"/>
+  <node name="rviz_marker" pkg="my_package" exec="rviz_marker_pub" output="screen"/>
+  </group>
+</launch>
