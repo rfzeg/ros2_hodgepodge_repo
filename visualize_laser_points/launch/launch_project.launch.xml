@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Launch file ROS2 -->
+
+<launch>
+
+  <include file="$(find-pkg-share visualize_laser_points)/launch/simulation.launch.py"/>
+
+  <!-- args that can be set from the command line or a default will be used -->
+  <arg name="rviz_config" default="/home/user/ros2_ws/src/ros2_hodgepodge_repo/visualize_laser_points/rviz/rviz_config.rviz"/>
+  <node name="rviz2" pkg="rviz2" exec="rviz2" args="-d $(var rviz_config)"/>
+
+  <node name="visualize_laser_points" pkg="visualize_laser_points" exec="visualize_laser_points_exe" output="screen"/>
+</launch>
