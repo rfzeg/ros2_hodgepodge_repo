@@ -1,4 +1,4 @@
-# The my_package ROS2 package
+# The ros2_hodgepodge_repo repository
 
 - Author: Roberto Zegers
 
@@ -10,18 +10,4 @@
 
 ## Instructions
 
-Build with:
-
-`colcon build --symlink-install`  
-
-After compiling, source the workspace otherwise you will get the "Package 'my_package' not found" error message:
-
-`source install/setup.bash`  
-
-Launch using ROS2 XML launch file:  
-
-`ros2 launch my_package launch_project.launch.xml`  
-
-
-## Dependencies
-- ROS2 Galactic  
+See README.md inside each package. 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(my_package)
+project(obstacle_avoidance)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -33,17 +33,12 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-# rviz marker publisher
-add_executable(rviz_marker_pub src/rviz_marker.cpp)
-ament_target_dependencies(rviz_marker_pub rclcpp visualization_msgs)
-
 # obstacle avoidance
 add_executable(obstacle_avoidance src/obstacle_avoidance.cpp)
 ament_target_dependencies(obstacle_avoidance rclcpp sensor_msgs geometry_msgs)
 
 install(TARGETS
   obstacle_avoidance
-  rviz_marker_pub
   DESTINATION lib/${PROJECT_NAME}/
 )
 
