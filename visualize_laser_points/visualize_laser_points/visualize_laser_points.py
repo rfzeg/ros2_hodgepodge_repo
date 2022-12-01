@@ -1,8 +1,24 @@
+#!/usr/bin/env python
+
+"""
+Rviz LaserScan filter and visualization markers
+Author: Roberto Zegers R.
+Copyright: Copyright (c) 2022, Roberto Zegers R.
+License: BSD-3-Clause
+Date: December 2022
+"""
+import copy
+import math
+
 import rclpy
 from rclpy.node import Node
-import copy
-from sensor_msgs.msg import LaserScan
 from rclpy.qos import ReliabilityPolicy, QoSProfile, qos_profile_sensor_data
+from geometry_msgs.msg import Point
+from geometry_msgs.msg import Vector3
+from std_msgs.msg import ColorRGBA
+from std_msgs.msg import Header
+from visualization_msgs.msg import Marker
+from sensor_msgs.msg import LaserScan
 
 
 class LaserPointVisualizer(Node):
@@ -19,10 +35,23 @@ class LaserPointVisualizer(Node):
         self.subscription
         self.filtered_ranges = []
         self.filtered_intensities = []
-        # initialize message
+        # initialize LaserScan message
         self.filtered_scan_msg = LaserScan()
         self.filtered_scan_publisher_ = self.create_publisher(
             LaserScan, '/filtered_scan', qos_profile_sensor_data)
+
+        self.rviz_marker_publisher_ = self.create_publisher(
+            Marker, '/scan_rviz_markers', qos_profile_sensor_data)
+        # initialize Marker message
+        self.marker_header = Header()
+        self.marker_header.frame_id = ''
+        self.riz_marker_msg = Marker(header=self.marker_header,
+                                     ns="laser_scan_markers",
+                                     id=0,
+                                     type=Marker.POINTS,
+                                     action=Marker.ADD,
+                                     scale=Vector3(x=0.2, y=0.2, z=0.2),
+                                     color=ColorRGBA(r=0.5, g=0., b=0.5, a=1.))
 
     def callback_scan(self, data):
         self.get_logger().debug('Number of laser ray range values: "%s"' % len(data.ranges))
@@ -37,9 +66,28 @@ class LaserPointVisualizer(Node):
         self.filtered_intensities = list(self.filtered_intensities)
 
         # filter out the laser rays based off fixed index values
-        for x in range(30, 120):
+        # use range(0, 0) to bypass this filter
+        for x in range(0, 0):
             self.filtered_ranges[x] = 0.0
             self.filtered_intensities[x] = 0.0
+
+        # read laser points from laser scan
+        for index, distance in enumerate(self.filtered_ranges):
+            angle_rad = index * (data.angle_max - data.angle_min) / \
+                len(data.ranges) + data.angle_min
+            # polar to cartesian coordinate values [x,y] w.r.t. laser sensor frame
+            x_coordinate = distance * math.cos(angle_rad)
+            y_coordinate = distance * math.sin(angle_rad)
+
+            self.riz_marker_msg.points.append(
+                Point(x=x_coordinate, y=y_coordinate))
+
+        # fill header, then publish rviz marker
+        self.riz_marker_msg.header.stamp = self.get_clock().now().to_msg()
+        self.riz_marker_msg.header.frame_id = data.header.frame_id
+        self.rviz_marker_publisher_.publish(self.riz_marker_msg)
+        # clear points
+        self.riz_marker_msg.points.clear()
 
         # fill message fields
         self.filtered_scan_msg.header.stamp = self.get_clock().now().to_msg()
@@ -64,9 +112,7 @@ def main(args=None):
     laser_point_visualizer = LaserPointVisualizer()
     rclpy.spin(laser_point_visualizer)
 
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
+    # Destroy the node explicitly (optional)
     laser_point_visualizer.destroy_node()
     rclpy.shutdown()
 
