@@ -1,7 +1,7 @@
 import traceback as tb
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, PoseStamped
 from nav_msgs.msg import Odometry
 from tf_transformations import euler_from_quaternion
 
@@ -29,6 +29,11 @@ class GoToPoseController(Node):
         # attribute to store odometry pose (x,y,yaw) in odometry frame
         self.robot_pose_in_xy_plane = None
 
+        self.goal_subscription = self.create_subscription(
+            PoseStamped, '/goal_pose', self.goal_callback, 10)
+        # attribute to store goal pose (x,y,yaw) in goal pose frame
+        self.goal_pose_in_xy_plane = None
+
     def timer_callback(self):
         """
         timer callback method
@@ -48,6 +53,17 @@ class GoToPoseController(Node):
 
         self.get_logger().info(
             f"Robot pose in '{msg.header.frame_id}' frame (x: {self.robot_pose_in_xy_plane[0]:.2f}, y: {self.robot_pose_in_xy_plane[1]:.2f}, theta: {self.robot_pose_in_xy_plane[2]:.2f})",
+            throttle_duration_sec=0.5  # Throttle logging frequency to max 2Hz
+        )
+
+    def goal_callback(self, pose_msg):
+        """
+        Goal pose orientation in rad in range of (-pi,pi)
+        """
+        self.goal_pose_in_xy_plane = self.pose_object_to_pose_2d(pose_msg)
+
+        self.get_logger().info(
+            f"Goal pose in '{pose_msg.header.frame_id}' frame (x: {self.goal_pose_in_xy_plane[0]:.2f}, y: {self.goal_pose_in_xy_plane[1]:.2f}, theta: {self.goal_pose_in_xy_plane[2]:.2f})",
             throttle_duration_sec=0.5  # Throttle logging frequency to max 2Hz
         )
 
