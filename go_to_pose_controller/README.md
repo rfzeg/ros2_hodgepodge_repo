@@ -13,13 +13,19 @@
 
 Inside your ROS2 workspace root build with:  
 
-`colcon build --packages-select go_to_pose_controller`   
+```
+colcon build --packages-select go_to_pose_controller
+```
 
 After compiling, source the workspace otherwise you will get the "Package 'go_to_pose_controller' not found" error message:  
+```
+source install/setup.bash 
+```
 
-`source install/setup.bash`  
-
-
+Run with:  
+```
+ros2 launch go_to_pose_controller go_to_pose_controller.launch.py
+```
 
 ## Dependencies
 - ROS2 Galactic  
