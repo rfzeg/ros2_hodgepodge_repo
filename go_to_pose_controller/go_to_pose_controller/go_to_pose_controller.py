@@ -30,18 +30,25 @@ class GoToPoseController(Node):
         # publish the message to the topic
         self.cmd_vel_publisher.publish(self.cmd_vel_msg)
 
+    def stop(self):
+        cmd_vel = Twist()
+        self.cmd_vel_publisher.publish(cmd_vel)
+
 
 def main(args=None):
     rclpy.init(args=args)
     go_to_pose_controller = GoToPoseController()
     try:
         rclpy.spin(go_to_pose_controller)
-        go_to_pose_controller.destroy_node()
     except KeyboardInterrupt:
         print("User requested shutdown.")
     except BaseException as e:
         print(f"Some error had occured: {e}")
         tb.print_exc()
+    # ensure robot stops before exiting
+    print("Stopping robot.")
+    go_to_pose_controller.stop()
+    go_to_pose_controller.destroy_node()
 
 
 if __name__ == '__main__':
