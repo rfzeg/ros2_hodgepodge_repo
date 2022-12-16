@@ -1,4 +1,15 @@
+#!/usr/bin/env python3
+"""
+Minimal go to pose controller node, ROS2
+Implements alternating turn and forward movement sequences
+Author: Roberto Zegers
+Date: December 2022
+License: BSD-3-Clause
+"""
+
 import traceback as tb
+from math import pow, atan2, sqrt, pi
+
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, PoseStamped
@@ -34,16 +45,89 @@ class GoToPoseController(Node):
         # attribute to store goal pose (x,y,yaw) in goal pose frame
         self.goal_pose_in_xy_plane = None
 
+        self.at_goal_position = False
+        self.distance_tolerance = 0.2  # meters
+        self.angular_tolerance = 0.2  # radians
+
+    def euclidean_distance(self):
+        """Euclidean distance between current pose and the goal."""
+        return sqrt(pow((self.goal_pose_in_xy_plane[0] - self.robot_pose_in_xy_plane[0]), 2) +
+                    pow((self.goal_pose_in_xy_plane[1] - self.robot_pose_in_xy_plane[1]), 2))
+
+    def linear_vel(self, constant=2):
+        """
+        Linear velocity proportional controller
+        """
+        return constant * self.euclidean_distance()
+
+    def steering_angle(self):
+        """
+        Find angle in radians from one pose to another in 2D space
+        angle in the frame of reference of current_pose and pose to aim at
+        atan2 returns angle in rad in the range of [-pi, pi)
+        This is the angle the robot will travel.
+        """
+        delta_y = self.goal_pose_in_xy_plane[1] - \
+            self.robot_pose_in_xy_plane[1]
+        delta_x = self.goal_pose_in_xy_plane[0] - \
+            self.robot_pose_in_xy_plane[0]
+
+        desired_heading_angle = atan2(delta_y, delta_x)
+
+        return desired_heading_angle
+
+    def angular_vel(self, constant=0.3):
+        """
+        Angular velocity proportional controller
+        """
+        return constant * (self.steering_angle() - self.robot_pose_in_xy_plane[2])
+
     def timer_callback(self):
         """
-        timer callback method
+        Guides the robot to the goal
         """
-        # define a linear x-axis velocity
-        self.cmd_vel_msg.linear.x = 0.2
-        # define an angular z-axis velocity
-        self.cmd_vel_msg.angular.z = 0.2
-        # publish the message to the topic
+        # check if odometry has been received
+        if self.robot_pose_in_xy_plane is None:
+            return
+
+        # check if goal pose has been received
+        if self.goal_pose_in_xy_plane is None:
+            return
+
+        if not self.at_goal_position:
+            # turn to goal
+            if abs(self.steering_angle() - self.robot_pose_in_xy_plane[2]) > self.angular_tolerance:
+                self.cmd_vel_msg.linear.x = 0.0
+                self.cmd_vel_msg.angular.z = self.angular_vel()
+            # move forward
+            else:
+                self.cmd_vel_msg.angular.z = 0.0
+                if self.euclidean_distance() >= self.distance_tolerance:
+                    self.cmd_vel_msg.linear.x = self.linear_vel()
+                else:
+                    # at goal position
+                    self.cmd_vel_msg.linear.x = 0.0
+                    self.at_goal_position = True
+
+        if self.at_goal_position:
+            # to-do: final alignment to desired heading angle
+            # to-do: allow receiving new goal inputs
+            # to-do: do not log this at the beginning
+            self.get_logger().debug('Robot arrived at goal pose.')
+            self.cmd_vel_msg.linear.x = 0.0
+            self.cmd_vel_msg.linear.y = 0.0
+            self.cmd_vel_msg.angular.z = 0.0
+
+        # publish message to move the robot
         self.cmd_vel_publisher.publish(self.cmd_vel_msg)
+
+        self.get_logger().debug('Output produced by the proportional controller:')
+        self.get_logger().debug(
+            f"Robot pose: \t X: {self.robot_pose_in_xy_plane[0]:.3f}, Y: {self.robot_pose_in_xy_plane[1]:.3f}, Theta: {self.robot_pose_in_xy_plane[2]:.3f}")
+        self.get_logger().debug(
+            f"Goal pose: \t X: {self.goal_pose_in_xy_plane[0]:.3f}, Y: {self.goal_pose_in_xy_plane[1]:.3f}, Theta: {self.goal_pose_in_xy_plane[2]:.3f}")
+        self.get_logger().debug(
+            f"cmd_vel_msg: \t .linear.x: {self.cmd_vel_msg.linear.x:.3f}, .linear.y: {self.cmd_vel_msg.linear.y:.3f}, .angular.z: {self.cmd_vel_msg.angular.z:.3f}")
 
     def odom_callback(self, msg):
         """
