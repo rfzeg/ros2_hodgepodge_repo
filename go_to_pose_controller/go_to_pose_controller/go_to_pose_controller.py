@@ -24,6 +24,11 @@ class GoToPoseController(Node):
         class constructor, initializes the Node object
         """
         super().__init__('go_to_pose_controller')
+        self.received_goal = False
+        self.at_goal_position = False
+        self.distance_tolerance = 0.2  # meters
+        self.angular_tolerance = 0.2  # radians
+
         # create the publisher object
         self.cmd_vel_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
         # define the timer period for 0.5 seconds
@@ -44,10 +49,6 @@ class GoToPoseController(Node):
             PoseStamped, '/goal_pose', self.goal_callback, 10)
         # attribute to store goal pose (x,y,yaw) in goal pose frame
         self.goal_pose_in_xy_plane = None
-
-        self.at_goal_position = False
-        self.distance_tolerance = 0.2  # meters
-        self.angular_tolerance = 0.2  # radians
 
     def euclidean_distance(self):
         """Euclidean distance between current pose and the goal."""
@@ -91,42 +92,43 @@ class GoToPoseController(Node):
             return
 
         # check if goal pose has been received
-        if self.goal_pose_in_xy_plane is None:
-            return
+        if self.received_goal:
 
-        if not self.at_goal_position:
-            # turn to goal
-            if abs(self.steering_angle() - self.robot_pose_in_xy_plane[2]) > self.angular_tolerance:
-                self.cmd_vel_msg.linear.x = 0.0
-                self.cmd_vel_msg.angular.z = self.angular_vel()
-            # move forward
-            else:
-                self.cmd_vel_msg.angular.z = 0.0
-                if self.euclidean_distance() >= self.distance_tolerance:
-                    self.cmd_vel_msg.linear.x = self.linear_vel()
-                else:
-                    # at goal position
+            if not self.at_goal_position:
+                # turn to goal
+                if abs(self.steering_angle() - self.robot_pose_in_xy_plane[2]) > self.angular_tolerance:
                     self.cmd_vel_msg.linear.x = 0.0
-                    self.at_goal_position = True
+                    self.cmd_vel_msg.angular.z = self.angular_vel()
+                # move forward
+                else:
+                    self.cmd_vel_msg.angular.z = 0.0
+                    if self.euclidean_distance() >= self.distance_tolerance:
+                        self.cmd_vel_msg.linear.x = self.linear_vel()
+                    else:
+                        # at goal position
+                        self.cmd_vel_msg.linear.x = 0.0
+                        self.at_goal_position = True
 
-        if self.at_goal_position:
-            # to-do: final alignment to desired heading angle
-            # to-do: allow receiving new goal inputs
-            self.get_logger().info('Robot arrived at goal pose.')
-            self.cmd_vel_msg.linear.x = 0.0
-            self.cmd_vel_msg.linear.y = 0.0
-            self.cmd_vel_msg.angular.z = 0.0
+            if self.at_goal_position:
+                # to-do: final alignment to desired heading angle
+                self.get_logger().info('Robot arrived at goal pose.')
+                self.cmd_vel_msg.linear.x = 0.0
+                self.cmd_vel_msg.linear.y = 0.0
+                self.cmd_vel_msg.angular.z = 0.0
+                # allow receiving new goal inputs once the robot arrived at the goal pose
+                self.received_goal = False
+                self.at_goal_position = False
 
-        # publish message to move the robot
-        self.cmd_vel_publisher.publish(self.cmd_vel_msg)
+            # publish message to move the robot
+            self.cmd_vel_publisher.publish(self.cmd_vel_msg)
 
-        self.get_logger().debug('Output produced by the proportional controller:')
-        self.get_logger().debug(
-            f"Robot pose: \t X: {self.robot_pose_in_xy_plane[0]:.3f}, Y: {self.robot_pose_in_xy_plane[1]:.3f}, Theta: {self.robot_pose_in_xy_plane[2]:.3f}")
-        self.get_logger().debug(
-            f"Goal pose: \t X: {self.goal_pose_in_xy_plane[0]:.3f}, Y: {self.goal_pose_in_xy_plane[1]:.3f}, Theta: {self.goal_pose_in_xy_plane[2]:.3f}")
-        self.get_logger().debug(
-            f"cmd_vel_msg: \t .linear.x: {self.cmd_vel_msg.linear.x:.3f}, .linear.y: {self.cmd_vel_msg.linear.y:.3f}, .angular.z: {self.cmd_vel_msg.angular.z:.3f}")
+            self.get_logger().debug('Output produced by the proportional controller:')
+            self.get_logger().debug(
+                f"Robot pose: \t X: {self.robot_pose_in_xy_plane[0]:.3f}, Y: {self.robot_pose_in_xy_plane[1]:.3f}, Theta: {self.robot_pose_in_xy_plane[2]:.3f}")
+            self.get_logger().debug(
+                f"Goal pose: \t X: {self.goal_pose_in_xy_plane[0]:.3f}, Y: {self.goal_pose_in_xy_plane[1]:.3f}, Theta: {self.goal_pose_in_xy_plane[2]:.3f}")
+            self.get_logger().debug(
+                f"cmd_vel_msg: \t .linear.x: {self.cmd_vel_msg.linear.x:.3f}, .linear.y: {self.cmd_vel_msg.linear.y:.3f}, .angular.z: {self.cmd_vel_msg.angular.z:.3f}")
 
     def odom_callback(self, msg):
         """
@@ -144,7 +146,7 @@ class GoToPoseController(Node):
         Goal pose orientation in rad in range of (-pi,pi)
         """
         self.goal_pose_in_xy_plane = self.pose_object_to_pose_2d(pose_msg)
-
+        self.received_goal = True
         self.get_logger().info(
             f"Received goal pose. Frame: '{pose_msg.header.frame_id}', x: {self.goal_pose_in_xy_plane[0]:.2f}, y: {self.goal_pose_in_xy_plane[1]:.2f}, theta: {self.goal_pose_in_xy_plane[2]:.2f}"
         )
