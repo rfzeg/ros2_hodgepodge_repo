@@ -112,8 +112,7 @@ class GoToPoseController(Node):
         if self.at_goal_position:
             # to-do: final alignment to desired heading angle
             # to-do: allow receiving new goal inputs
-            # to-do: do not log this at the beginning
-            self.get_logger().debug('Robot arrived at goal pose.')
+            self.get_logger().info('Robot arrived at goal pose.')
             self.cmd_vel_msg.linear.x = 0.0
             self.cmd_vel_msg.linear.y = 0.0
             self.cmd_vel_msg.angular.z = 0.0
@@ -135,7 +134,7 @@ class GoToPoseController(Node):
         """
         self.robot_pose_in_xy_plane = self.pose_object_to_pose_2d(msg.pose)
 
-        self.get_logger().info(
+        self.get_logger().debug(
             f"Robot pose in '{msg.header.frame_id}' frame (x: {self.robot_pose_in_xy_plane[0]:.2f}, y: {self.robot_pose_in_xy_plane[1]:.2f}, theta: {self.robot_pose_in_xy_plane[2]:.2f})",
             throttle_duration_sec=0.5  # Throttle logging frequency to max 2Hz
         )
@@ -147,8 +146,7 @@ class GoToPoseController(Node):
         self.goal_pose_in_xy_plane = self.pose_object_to_pose_2d(pose_msg)
 
         self.get_logger().info(
-            f"Goal pose in '{pose_msg.header.frame_id}' frame (x: {self.goal_pose_in_xy_plane[0]:.2f}, y: {self.goal_pose_in_xy_plane[1]:.2f}, theta: {self.goal_pose_in_xy_plane[2]:.2f})",
-            throttle_duration_sec=0.5  # Throttle logging frequency to max 2Hz
+            f"Received goal pose. Frame: '{pose_msg.header.frame_id}', x: {self.goal_pose_in_xy_plane[0]:.2f}, y: {self.goal_pose_in_xy_plane[1]:.2f}, theta: {self.goal_pose_in_xy_plane[2]:.2f}"
         )
 
     @staticmethod
