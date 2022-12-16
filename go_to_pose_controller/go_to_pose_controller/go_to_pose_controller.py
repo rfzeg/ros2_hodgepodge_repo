@@ -28,6 +28,7 @@ class GoToPoseController(Node):
         self.at_goal_position = False
         self.distance_tolerance = 0.2  # meters
         self.angular_tolerance = 0.2  # radians
+        self.max_linear_vel = 0.4  # meters/sec
 
         # create the publisher object
         self.cmd_vel_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
@@ -55,11 +56,15 @@ class GoToPoseController(Node):
         return sqrt(pow((self.goal_pose_in_xy_plane[0] - self.robot_pose_in_xy_plane[0]), 2) +
                     pow((self.goal_pose_in_xy_plane[1] - self.robot_pose_in_xy_plane[1]), 2))
 
-    def linear_vel(self, constant=2):
+    def linear_vel(self, constant=1):
         """
         Linear velocity proportional controller
+        limits maximal linear velocity
         """
-        return constant * self.euclidean_distance()
+        linear_velocity = constant * self.euclidean_distance()
+        if linear_velocity >= self.max_linear_vel:
+            return self.max_linear_vel
+        return linear_velocity
 
     def steering_angle(self):
         """
@@ -101,8 +106,9 @@ class GoToPoseController(Node):
                     self.cmd_vel_msg.angular.z = self.angular_vel()
                 # move forward controlling angular and linear velocity simultaneously
                 else:
-                    self.cmd_vel_msg.angular.z = self.angular_vel()
+                    self.cmd_vel_msg.angular.z = self.angular_vel(0.5)
                     if self.euclidean_distance() >= self.distance_tolerance:
+                        # use linear velocity proportional controller that also limits velocity to max_linear_vel
                         self.cmd_vel_msg.linear.x = self.linear_vel()
                     else:
                         # at goal position
