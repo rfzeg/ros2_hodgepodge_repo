@@ -99,9 +99,9 @@ class GoToPoseController(Node):
                 if abs(self.steering_angle() - self.robot_pose_in_xy_plane[2]) > self.angular_tolerance:
                     self.cmd_vel_msg.linear.x = 0.0
                     self.cmd_vel_msg.angular.z = self.angular_vel()
-                # move forward
+                # move forward controlling angular and linear velocity simultaneously
                 else:
-                    self.cmd_vel_msg.angular.z = 0.0
+                    self.cmd_vel_msg.angular.z = self.angular_vel()
                     if self.euclidean_distance() >= self.distance_tolerance:
                         self.cmd_vel_msg.linear.x = self.linear_vel()
                     else:
