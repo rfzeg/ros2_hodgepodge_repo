@@ -13,7 +13,7 @@ This package contains a ros2 node written in C++ that subscribes to the topic `/
 The node calculates the encoder ticks for each wheel based on their velocities using the formula:  
 `Encoder ticks = (wheel_velocity / (2 * pi * wheel_radius)) * ticks_per_rotation`
 This program assumes 360 encoder ticks for one wheel rotation and a wheel_radius of 0.05 but these values are parameters that can be modified. 
-The code accumulates the total ticks for each wheel since the program started and prints them out to the console.   
+The code accumulates the total ticks for each wheel since the program started and publishes them using a message of type `std_msgs/msg/int64_multi_array.hpp` to the `encoder_ticks_array` topic in the same order they where in the `velocity` field.  
 
 
 ## Instructions

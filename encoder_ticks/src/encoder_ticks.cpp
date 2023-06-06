@@ -1,6 +1,7 @@
 #include "math.h"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
+#include "std_msgs/msg/int64_multi_array.hpp"
 #include <chrono>
 #include <iostream>
 #include <vector>
@@ -18,6 +19,10 @@ public:
 
     // Initialize encoder tick counters to 0
     accumulated_ticks_ = {0, 0, 0, 0};
+
+    // Create the publisher for std_msgs::Int64MultiArray
+    publisher_ = this->create_publisher<std_msgs::msg::Int64MultiArray>(
+        "encoder_ticks_array", 10);
   }
 
 private:
@@ -50,18 +55,17 @@ private:
         encoder_ticks.push_back(accumulated_ticks_[i]);
       }
 
-      // Use the encoder_ticks as needed
-      for (size_t i = 0; i < encoder_ticks.size(); ++i) {
-        std::string wheel_name = msg->name[i];
-        std::cout << wheel_name << ": " << encoder_ticks[i] << " ticks"
-                  << std::endl;
-      }
+      // Publish the encoder ticks as an Int64MultiArray
+      auto msg = std::make_shared<std_msgs::msg::Int64MultiArray>();
+      msg->data = encoder_ticks;
+      publisher_->publish(*msg);
     }
   }
 
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr subscription_;
   std::chrono::time_point<std::chrono::steady_clock> last_time_;
   std::vector<int64_t> accumulated_ticks_;
+  rclcpp::Publisher<std_msgs::msg::Int64MultiArray>::SharedPtr publisher_;
 };
 
 int main(int argc, char *argv[]) {
